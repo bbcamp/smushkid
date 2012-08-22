@@ -1,10 +1,14 @@
 #!/usr/bin/env ruby
-
 require 'find'
 require 'RMagick'
 require 'json'
+
+path = ARGV[0]
+quality = ARGV[1]
+
 totalsavings = 0
-Find.find('uploads') do |file|
+File.open("images_processed.json", "a+") { |f| f << "{ \"image_results\" : [ " }
+Find.find(path) do |file|
   pattern = '**' '/' '*.jpg'
   if File.fnmatch(pattern, file, File::FNM_CASEFOLD)
     puts "matched: #{file}"
@@ -22,11 +26,9 @@ Find.find('uploads') do |file|
     }
     target_file = File.dirname(file) + "/" + "smaller-" + File.basename(file)
     simg.strip!
+    simg.quantize 32
     simg.write(target_file) do
-      # maybe doing this wrong?  seems to make file bigger
-      # something with unknow pixel density
-      #self.compression = Magick::LosslessJPEGCompression
-      self.quality = 90
+      self.quality = quality.to_i
     end
     timg = Magick::Image::read(target_file).first
     target_image = {
@@ -41,26 +43,29 @@ Find.find('uploads') do |file|
              'ppi' => timg.units
     }
     @savings =  source_image['filesize'] - target_image['filesize']
-    image_results = { 'filename' => file, 'savings' => @savings, 'before' => source_image, 'after' => target_image }
+    image_results = { "filename" => file, "savings" => @savings, "before" => source_image, "after" => target_image }
     puts "savings:"
     puts @savings
     if @savings < 0
       @savings = 0
-      puts "no space savings acheived deleting #{target_image}"
+      puts "no space savings acheived deleting #{target_file}"
       File.delete(target_file)
     else
       puts "space savings! replacing with #{simg}"
       puts "move #{target_file} to #{file}"
       File.rename target_file, file
     end
-    File.open("imageprocessed.json", "a+") { |f| f << image_results.to_json}
-    File.open("savings.txt", "a+") { |f| f << @savings.to_s + "\n"}
+    File.open("images_processed.json", "a+") { |f| f << image_results.to_json + ','}
+    File.open("images_processed_list.txt", "a+") { |f| f << file + "\n"}
   else
     puts "no match: #{file}"
   end
   totalsavings = totalsavings + @savings.to_i
-  puts "RUNNING TOTAL"
+  puts "Running total savings (in bytes):"
   puts totalsavings
 end
+File.open("images_processed.json", "a+") { |f| f << "]}" }
+
+
 
 
