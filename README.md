@@ -24,9 +24,14 @@ If this complains about imagemagick not being found, install Homebrew (http://mx
 
     $ gem install smushkid
 
+### Options
+
+    -q no STDOUT ( except for single file JSON )
+    -b create backup of any optimized files  ( prefixes with original- )
+
 ### Usage
 
-    $ smushkid path/to/directory desired_quality
+    $ smushkid path/to/directory desired_quality -b -q 
 
 ### Example
 
