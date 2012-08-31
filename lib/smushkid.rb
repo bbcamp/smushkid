@@ -2,18 +2,23 @@
 require 'find'
 require 'RMagick'
 require 'json'
+require 'fileutils'
 
-path = ARGV[0]
-quality = ARGV[1]
+@quiet       = ARGV.delete('-q')
+@make_backup = ARGV.delete('-b')
+path         = ARGV[0]
+@quality     = ARGV[1]
 
-totalsavings = 0
-File.open("images_processed.json", "a+") { |f| f << "{ \"image_results\" : [ " }
-Find.find(path) do |file|
-  pattern = '**' '/' '*.jpg'
-  if File.fnmatch(pattern, file, File::FNM_CASEFOLD)
-    puts "matched: #{file}"
+if File.directory?(path) 
+  totalsavings = 0
+  File.open("images_processed.json", "a+") { |f| f << "{ \"image_results\" : [ " }
+  @multi = true
+else
+end
+
+def process_file(file)
     simg = Magick::Image::read(file).first
-    source_image = {
+    @source_image = {
              'format' => simg.format,
              'filesize' => simg.filesize,
              'geometry_cols' => simg.columns,
@@ -24,14 +29,13 @@ Find.find(path) do |file|
              'colors' => simg.number_colors,
              'ppi' => simg.units
     }
-    target_file = File.dirname(file) + "/" + "smaller-" + File.basename(file)
     simg.strip!
     simg.quantize 32
-    simg.write(target_file) do
-      self.quality = quality.to_i
+    simg.write(@target_file) do
+        self.quality = @quality.to_i
     end
-    timg = Magick::Image::read(target_file).first
-    target_image = {
+    timg = Magick::Image::read(@target_file).first
+    @target_image = {
              'format' => timg.format,
              'filesize' => timg.filesize,
              'geometry_cols' => timg.columns,
@@ -42,30 +46,43 @@ Find.find(path) do |file|
              'colors' => timg.number_colors,
              'ppi' => timg.units
     }
-    @savings =  source_image['filesize'] - target_image['filesize']
-    image_results = { "filename" => file, "savings" => @savings, "before" => source_image, "after" => target_image }
-    puts "savings:"
-    puts @savings
+    @savings =  @source_image['filesize'] - @target_image['filesize']
+    @image_results = { "filename" => file, "savings" => @savings, "before" => @source_image, "after" => @target_image }
+    puts "savings: " + @savings.to_s unless @quiet
     if @savings < 0
       @savings = 0
-      puts "no space savings acheived deleting #{target_file}"
-      File.delete(target_file)
+      puts "no space savings acheived deleting #{@target_file}" unless @quiet
+      File.delete(@target_file)
     else
-      puts "space savings! replacing with #{simg}"
-      puts "move #{target_file} to #{file}"
-      File.rename target_file, file
+        if @make_backup
+          puts "space savings! replacing with: #{file} and making backup or original: #{@backup_file}" unless @quiet
+          puts "move #{@target_file} to #{file}" unless @quiet
+          FileUtils.cp file, @backup_file
+          File.rename @target_file, file
+          File.open("images_processed.json", "a+") { |f| f << @image_results.to_json + ','}
+        else
+          puts "space savings! replacing with #{simg}" unless @quiet
+          puts "move #{@target_file} to #{file}" unless @quiet
+          File.rename @target_file, file
+          File.open("images_processed.json", "a+") { |f| f << @image_results.to_json + ','}
+        end
     end
-    File.open("images_processed.json", "a+") { |f| f << image_results.to_json + ','}
-    File.open("images_processed_list.txt", "a+") { |f| f << file + "\n"}
-  else
-    puts "no match: #{file}"
-  end
-  totalsavings = totalsavings + @savings.to_i
-  puts "Running total savings (in bytes):"
-  puts totalsavings
 end
-File.open("images_processed.json", "a+") { |f| f << "]}" }
 
 
-
-
+Find.find(path) do |file|
+  @target_file = File.dirname(file) + "/" + "smaller-" + File.basename(file)
+  @backup_file = File.dirname(file) + "/" + "original-" + File.basename(file)
+  if @multi
+      pattern = '**' '/' '*.jpg'
+      process_file(file) if File.fnmatch(pattern, file, File::FNM_CASEFOLD)
+      File.open("images_processed_list.txt", "a+") { |f| f << file + "\n"}
+  else
+      pattern = '*.jpg'
+      process_file(file) if File.fnmatch(pattern, file, File::FNM_CASEFOLD)
+      puts @image_results.to_json
+  end
+  totalsavings = totalsavings.to_i + @savings.to_i
+  puts "Total savings (in bytes): " + totalsavings.to_s unless @quiet
+end
+File.open("images_processed.json", "a+") { |f| f << "]}" } if File.directory?(path)
