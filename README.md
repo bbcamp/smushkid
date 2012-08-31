@@ -7,6 +7,19 @@ A command utility that compresses images in the background for our customers.
 Outputs a JSON file with detailed information on the conversion, and a .txt
 file listing the files processed.
 
+### Requirements
+
+You'll need the RMagick gem installed first, on OSX you may need to install imagemagick before you can do that. 
+
+#### Meeting the requirements on Mountain Lion
+
+    $ gem install rmagick 
+
+If this complains about imagemagick not being found, install Homebrew (http://mxcl.github.com/homebrew/)
+
+    $ brew install imagemagick
+
+
 ### Installation
 
     $ gem install smushkid
