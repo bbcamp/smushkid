@@ -74,11 +74,11 @@ Find.find(path) do |file|
   @target_file = File.dirname(file) + "/" + "smaller-" + File.basename(file)
   @backup_file = File.dirname(file) + "/" + "original-" + File.basename(file)
   if @multi
-      pattern = '**' '/' '*.jpg'
+      pattern = '**' '/' '*.jp[e]g'
       process_file(file) if File.fnmatch(pattern, file, File::FNM_CASEFOLD)
       File.open("images_processed_list.txt", "a+") { |f| f << file + "\n"}
   else
-      pattern = '*.jpg'
+      pattern = '*.jp[e]g'
       process_file(file) if File.fnmatch(pattern, file, File::FNM_CASEFOLD)
       puts @image_results.to_json
   end
