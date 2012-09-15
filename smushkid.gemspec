@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'smushkid'
-  s.version     = '0.0.2'
+  s.version     = '0.0.3'
   s.date        = '2012-08-21'
   s.summary     = "Compress and Optimize JPG images"
   s.description = "Compress and optimize JPG images with RMagick"
